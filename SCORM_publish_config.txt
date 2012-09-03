@@ -1,0 +1,74 @@
+h1. Parâmetros de publicação no Moodle
+
+
+h4. CONFIGURAÇÕES TÍPICAS
+
+Em geral as seguintes configurações abaixo são suficientes. Aquelas que não são mencionadas assumem o valor padrão.
+
+h3. Geral
+
+*Nome:* nome do exercício no contexto do curso
+*Descrição:* descrição do exercícios mais informações relevantes ao aluno.
+*Arquivo SCORM:* http://midia.atp.usp.br/atividades-interativas/AI-0162/AI-0162_PIF.zip
+
+h3. Configurações exibidas
+
+*Mostrar:* janela atual
+*Esconder estrutura do curso na janela de execução:* desabilitado
+
+h3. Configurações de nota/_Grade settings_
+
+*Método de avaliação:* Objetos de aprendizagem
+
+h3. Parâmetros adicionais
+
+*Número de tentativas:* 1 tentativa
+
+h3. Configurações comuns de módulos
+
+*Número de identificação do módulo:* AI-xxxx ou ID pertinente à estrutura do curso, a critério do Designer Instrucional.
+
+
+h4. TODAS AS CONFIGURAÇÕES
+
+Abaixo estão todos os parâmetros de configuração de atividade SCORM/AICC no Moodle 2. Os valores em maiúscula indicam a configuração padrão do Moodle, enquanto aqueles entre colchetes indicam a configuração padrão da equipe de Objetos de Aprendizagem do CEPA.
+
+h3. Geral
+
+*Nome:* Atividade Interativa - O uso da água e suas respectivas causas e consequências
+*Descrição:* A água é um dos principais recursos limitantes para a vida. O uso de água nos diversos setores da sociedade leva à deterioração de sua qualidade, já que parte da água não consumida volta para os estoques naturais com qualidade inferior em relação à porção retirada.A tabela nesta atividade apresenta as fontes mais comuns, e suas consequências, de alteração da qualidade da água. Outros fatores ligados às atividades humanas, tais como escoamento superficial ou percolação para o lençol freático, também podem ter efeitos indiretos sobre a qualidade da água. Objetivo: esta atividade interativa consiste em arrastar as respectivas causas e consequências para cada um dos fatores (impactos) apresentados, levando a entender de que modo os usos dominantes alteram a qualidade da água.
+
+*OBSERVAÇÂO:* Inserir dados de prazo e nota conforme necessidade.
+
+*Exibir descrição na página do curso:* selecionado
+*Arquivo do pacote:* http://midia.atp.usp.br/atividades-interativas/AI-0162/AI-0162_PIF.zip
+
+h3. Restringir resposta para este período de tempo
+
+*Abrir em* dd/mm/aaaa às hh:mm (a critério do DI/Professor)
+*Até* dd/mm/aaaa às hh:mm (a critério do DI/Professor)
+
+h3. Configurações exibidas
+
+*Mostrar:* JANELA ATUAL
+*Largura:* 720
+*Altura:* 620
+
+*O estudante salta a página de menu:* NUNCA
+*Esconder botão prévia:* sim
+*Display course structure on entry page:* NÃO
+*Esconder estrutura do curso na janela de execução:* desabilitado
+*Esconder botões de navegação:* sim
+
+h3. Configurações de nota/_Grade settings_
+
+*Método de avaliação:* NOTA MAIS ALTA
+*Nota máxima:* 100
+
+h3. Parâmetros adicionais
+
+*Número de tentativas:* 1 tentativa
+
+h3. Configurações comuns de módulos
+
+*Número de identificação do módulo:* AI-0162 ou ID pertinente à estrutura do curso, a critério do Designer Instrucional.

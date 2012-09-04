@@ -1,5 +1,6 @@
 package  
 {
+	import flash.display.DisplayObject;
 	import flash.display.MovieClip;
 	import flash.display.Sprite;
 	import flash.events.Event;
@@ -12,28 +13,50 @@ package
 	 */
 	public class Molecula extends MovieClip
 	{
-		private var pontosLigacao:Vector.<Sprite> = new Vector.<Sprite>();
+		private var _pontosLigacao:Vector.<Sprite> = new Vector.<Sprite>();
 		private var ligacoesAtuais:Dictionary = new Dictionary();
 		
 		public function Molecula() 
 		{
 			this.buttonMode = true;
+			pegaLigacoes();
 		}
 		
-		public function get posicoesPontosLigacao():Vector.<Point>
+		private function pegaLigacoes():void 
+		{
+			for (var i:int = 0; i < numChildren; i++) 
+			{
+				var child:DisplayObject = getChildAt(i);
+				if (child is MarcacaoCovalente || child is MarcacaoPonte) {
+					_pontosLigacao.push(child);
+				}
+			}
+		}
+		
+		/*public function get posicoesPontosLigacao():Vector.<Point>
 		{
 			var vec:Vector.<Point> = new Vector.<Point>();
 			for (var i:int = 0; i < pontosLigacao.length; i++) 
 			{
-				vec.push(new Point(pontosLigacao[i].x + this.x, pontosLigacao[i].y + this.y));
+				if(temConexao(pontosLigacao[i])) vec.push(new Point(pontosLigacao[i].x + this.x, pontosLigacao[i].y + this.y));
 			}
 			
 			return vec;
+		}*/
+		
+		public function get pontosLigacao():Vector.<Sprite> 
+		{
+			return _pontosLigacao;
 		}
 		
 		public function setLigacao(pontoExterno:Sprite, pontoInterno:Sprite):void
 		{
 			ligacoesAtuais[pontoInterno] = pontoExterno;
+		}
+		
+		public function removeLigacao(pontoInterno:Sprite):void
+		{
+			ligacoesAtuais[pontoInterno] = null;
 		}
 		
 		public function getPosicaoPontoLigacao(ponto:Sprite):Point

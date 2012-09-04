@@ -109,9 +109,11 @@
 					break;
 				case "hInvert":
 					inverteObjeto(movingObject, "h");
+					procuraLigacoes();
 					return;
 				case "vInvert":
 					inverteObjeto(movingObject, "v");
+					procuraLigacoes();
 					return;
 				default:
 					return;
@@ -120,6 +122,7 @@
 			newObj.addEventListener(MouseEvent.MOUSE_DOWN, downMoleculasListener);
 			moleculas.push(newObj);
 			layerAtividade.addChild(newObj);
+			layerAtividade.setChildIndex(spriteLigacoes, layerAtividade.numChildren - 1);
 			
 			removeSelection();
 			movingObject = newObj;
@@ -163,6 +166,7 @@
 			removeSelection();
 			movingObject = Molecula(e.target);
 			layerAtividade.setChildIndex(movingObject, layerAtividade.numChildren - 1);
+			layerAtividade.setChildIndex(spriteLigacoes, layerAtividade.numChildren - 1);
 			mouseDiff.x = movingObject.mouseX * movingObject.scaleX;
 			mouseDiff.y = movingObject.mouseY * movingObject.scaleY;
 			stage.addEventListener(MouseEvent.MOUSE_UP, upMoleculasListener);
@@ -188,84 +192,103 @@
 		
 		private function procuraLigacoes():void 
 		{
-			//var vetorDist:Array = getTabela1();
+			ligacoes.splice(0, ligacoes.length);
+			inicioLigacoes = new Dictionary();
+			fimLigacoes = new Dictionary();
 			
+			var vetorDist:Array = getTabela();
+			var nElementos:int = getNelementos();
 			
+			var triple:Array = getMinDist(vetorDist);
+			while (triple[2] <= minDist) 
+			{
+				if(inicioLigacoes[triple[0]] == null && inicioLigacoes[triple[1]] == null && fimLigacoes[triple[0]] == null && fimLigacoes[triple[1]] == null){
+					ligacoes.push(triple[0]);
+					inicioLigacoes[triple[0]] = triple[1];
+					fimLigacoes[triple[1]] = triple[0];
+				}
+				triple = getMinDist(vetorDist);
+			}
+			
+			desenhaLigacoes();
 		}
 		
-		private function getTabela1():Array
+		private function getMinDist(vetorDist:Array):Array
 		{
-			var arrayElementos:Array = new Array();
+			var indexI:int;
+			var indexJ:int;
+			var distanciaMinima:Number = Infinity;
+			
+			for (var i:int = 0; i < vetorDist.length - 1; i++) 
+			{
+				look: for (var j:int = 0; j < vetorDist[i].length - 1; j++) 
+				{
+					if (j < i) {
+						if (vetorDist[i][j] < distanciaMinima) {
+							indexI = i;
+							indexJ = j;
+							distanciaMinima = vetorDist[i][j];
+						}
+					}else {
+						break look;
+					}
+				}
+			}
+			
+			for (var k:int = 0; k < vetorDist[indexI].length - 1; k++) 
+			{
+				vetorDist[indexI][k] = Infinity;
+			}
+			
+			for (var l:int = 0; l < vetorDist.length - 1; l++) 
+			{
+				vetorDist[l][indexJ] = Infinity;
+			}
+			
+			var arrReturn:Array = [vetorDist[indexI][vetorDist[indexI].length - 1], vetorDist[vetorDist.length - 1][indexJ], distanciaMinima];
+			
+			return arrReturn;
+		}
+		
+		private function getTabela():Array
+		{
 			var nElementos:int = getNelementos();
+			var arrayElementos:Array = new Array();
 			var auxI:int = 0;
 			var auxJ:int = 0;
-			
+			arrayElementos[nElementos] = new Array();
 			for (var i:int = 0; i < moleculas.length; i++) 
 			{
 				for (var j:int = 0; j < moleculas[i].pontosLigacao.length; j++) 
 				{
 					arrayElementos[auxI] = new Array();
 					arrayElementos[auxI][nElementos] = moleculas[i].pontosLigacao[j];
-					auxI++;
 					auxJ = 0;
 					for (var k:int = 0; k < moleculas.length; k++) 
 					{
 						for (var l:int = 0; l < moleculas[k].pontosLigacao.length; l++) 
 						{
-							if (moleculas[i].pontosLigacao[j].parent == moleculas[k].pontosLigacao[l].parent) arrayElementos[auxI][auxJ] = Infinity;
-							else arrayElementos[auxI][auxJ] = pegaDistancia(moleculas[i].pontosLigacao[j], moleculas[k].pontosLigacao[l]);
+							if (moleculas[i].pontosLigacao[j].parent == moleculas[k].pontosLigacao[l].parent) {
+								arrayElementos[auxI][auxJ] = Infinity;
+								//arrayElementos[auxI].push(Infinity);
+							}else {
+								if ((moleculas[i].pontosLigacao[j] is MarcacaoCovalente && moleculas[k].pontosLigacao[l] is MarcacaoCovalente) || 
+									(moleculas[i].pontosLigacao[j] is MarcacaoPonte && moleculas[k].pontosLigacao[l] is MarcacaoPonte)) {
+										arrayElementos[auxI][auxJ] = pegaDistancia(moleculas[i].pontosLigacao[j], moleculas[k].pontosLigacao[l]);
+									}else {
+										arrayElementos[auxI][auxJ] = Infinity;
+									}
+								
+							}
 							arrayElementos[nElementos][auxJ] = moleculas[k].pontosLigacao[l];
 							auxJ++;
 						}
 					}
-				}
-			}
-		}
-		
-		private function getTabela():Array
-		{
-			var nElementos:int = getNelementos() + 1;
-			var vetorDistancia:Array = new Array(nElementos, nElementos);
-			var auxMoleculaLinha:int = 0;
-			var auxMoleculaColuna:int = 0;
-			var auxPontoMarcacaoLinha:int = 0;
-			var auxPontoMarcacaoColuna:int = 0;
-			
-			for (var i:int = 0; i < nElementos; i++) 
-			{
-				if (moleculas[auxMoleculaLinha].pontosLigacao.length == auxPontoMarcacaoLinha) {
-					auxMoleculaLinha++;
-					auxPontoMarcacaoLinha = 0;
-				}
-				var ptA:Sprite = moleculas[auxMoleculaLinha].pontosLigacao[auxPontoMarcacaoLinha];
-				vetorDistancia[i][vetorDistancia[i].length - 1] = ptA;
-				auxPontoMarcacaoLinha++;
-				
-				loopj: for (var j:int = 0; j < nElementos; j++) 
-				{
-					if (j < i) {
-						if (moleculas[auxMoleculaColuna].pontosLigacao.length == auxPontoMarcacaoColuna) {
-							auxMoleculaColuna++;
-							auxPontoMarcacaoColuna = 0;
-						}
-						var ptB:Sprite = moleculas[auxMoleculaColuna].pontosLigacao[auxPontoMarcacaoColuna];
-						vetorDistancia[vetorDistancia.length - 1][j] = ptB;
-						auxPontoMarcacaoColuna++;
-						
-						if (ptA.parent == ptB.parent) {
-							vetorDistancia[i][j] = Infinity;
-						}else {
-							vetorDistancia[i][j] = pegaDistancia(ptA, ptB);
-						}
-						
-					}else {
-						vetorDistancia[i][j] = Infinity;
-						break loopj;
-					}
+					auxI++;
 				}
 			}
 			
-			return vetorDistancia;
+			return arrayElementos;
 		}
 		
 		private function getNelementos():int

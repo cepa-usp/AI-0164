@@ -6,7 +6,7 @@
   </metadata>
   <organizations default="CEPA">
     <organization identifier="CEPA" structure="Hierárquico">
-      <title>Montagem de um DNA</title>
+      <title>Montando um DNA</title>
       <item identifier="only_item" identifierref="item1_resource" isvisible="true" parameters="?tentativas=4">
         <title>Exercício</title>
       </item>

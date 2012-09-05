@@ -62,6 +62,16 @@ package
 			return _tiposPontos;
 		}
 		
+		public function getTipoLigacao(spr:Sprite):String
+		{
+			return _tiposPontos[_pontosLigacao.indexOf(spr)];
+		}
+		
+		public function setTipoLigacao(spr:Sprite, tipo:String):void
+		{
+			_tiposPontos[_pontosLigacao.indexOf(spr)] = tipo;
+		}
+		
 		public function setLigacao(pontoInterno:Sprite, pontoExterno:Sprite):void
 		{
 			ligacoesAtuais[pontoInterno] = pontoExterno;

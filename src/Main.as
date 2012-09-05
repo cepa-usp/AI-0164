@@ -7,6 +7,7 @@
 	import cepa.utils.ToolTip;
 	import com.eclecticdesignstudio.motion.Actuate;
 	import com.eclecticdesignstudio.motion.easing.Linear;
+	import fl.controls.RadioButton;
 	import fl.transitions.easing.None;
 	import fl.transitions.Tween;
 	import flash.display.DisplayObject;
@@ -41,6 +42,10 @@
 		
 		private var colorCovalente:uint = 0x000000;
 		private var colorPonte:uint = 0xFF0000;
+		private var colorIndefinido:uint = 0xC0C0C0;
+		
+		private var colors:Dictionary = new Dictionary();
+		
 		private var lineTickness:int = 2;
 		
 		//private var spriteLigacoes:Sprite;
@@ -67,17 +72,26 @@
 			}
 		}
 		
+		private var posInicialMenuLigacao:Number = 602;
+		private var posFinalMenuLigacao:Number = 790;
+		
 		private function organizeLayers():void 
 		{
 			layerAtividade.addChild(entrada);
 			layerAtividade.addChild(finaliza);
 			layerAtividade.addChild(opcoes);
 			layerAtividade.addChild(menuTipoLigacao);
-			menuTipoLigacao.visible = false;
+			//menuTipoLigacao.visible = false;
+			menuTipoLigacao.x = posFinalMenuLigacao;
+			menuTipoLigacao.indefinido.visible = true;
 			//spriteLigacoes = new Sprite();
 			//layerAtividade.addChild(spriteLigacoes);
 			lock(opcoes.hInvert);
 			lock(opcoes.vInvert);
+			
+			colors[Molecula.TIPO_COVALENTE] = colorCovalente;
+			colors[Molecula.TIPO_PONTE] = colorPonte;
+			colors[Molecula.TIPO_INDEFINIDO] = colorIndefinido;
 		}
 		
 		private function addListeners():void 
@@ -87,6 +101,25 @@
 			
 			stage.addEventListener(MouseEvent.MOUSE_DOWN, downStage);
 			opcoes.addEventListener(MouseEvent.MOUSE_DOWN, downOpcoes);
+			
+			menuTipoLigacao.addEventListener(MouseEvent.CLICK, menuLigacaoClick);
+		}
+		
+		private function menuLigacaoClick(e:MouseEvent):void 
+		{
+			if(!e.target is RadioButton) return;
+			if (ligacaoSelecionada != null) {
+				
+				var sprIni:Sprite = ligacoes[spriteLigacoes.indexOf(ligacaoSelecionada)];
+				var sprFim:Sprite = inicioLigacoes[sprIni];
+				
+				var tipo:String = e.target.name;
+				
+				Molecula(sprIni.parent).setTipoLigacao(sprIni, tipo);
+				Molecula(sprFim.parent).setTipoLigacao(sprFim, tipo);
+				
+				redesenhaSpr(ligacaoSelecionada);
+			}
 		}
 		
 		private function downStage(e:MouseEvent):void 
@@ -101,7 +134,8 @@
 				
 				if (ligacaoSelecionada != null) {
 					ligacaoSelecionada.filters = [];
-					menuTipoLigacao.visible = false;
+					//menuTipoLigacao.visible = false;
+					Actuate.tween(menuTipoLigacao, 0.3, { x:posFinalMenuLigacao } );
 					ligacaoSelecionada = null;
 				}
 			}
@@ -218,7 +252,8 @@
 			
 			if (ligacaoSelecionada != null) {
 				ligacaoSelecionada.filters = [];
-				menuTipoLigacao.visible = false;
+				//menuTipoLigacao.visible = false;
+				Actuate.tween(menuTipoLigacao, 0.3, { x:posFinalMenuLigacao } );
 				ligacaoSelecionada = null;
 			}
 			
@@ -278,6 +313,26 @@
 							if (analisaPentose(molInicial)) acertos++;
 							else molInicial.filters = [erroFilter];
 							break;
+					}
+				}
+			}
+			
+			for (var j:int = 0; j < ligacoes.length; j++) 
+			{
+				total++;
+				var inicio:Sprite = ligacoes[j];
+				var end:Sprite = inicioLigacoes[inicio];
+				
+				var tipoIni:String = Molecula(inicio.parent).getTipoLigacao(inicio);
+				var tipoFim:String = Molecula(end.parent).getTipoLigacao(end);
+				
+				if (tipoIni == tipoFim) {
+					if (tipoIni != Molecula.TIPO_INDEFINIDO) {
+						if (inicio is MarcacaoCovalente && tipoIni == Molecula.TIPO_COVALENTE) {
+							acertos++;
+						}else if (inicio is MarcacaoPonte && tipoIni == Molecula.TIPO_PONTE) {
+							acertos++;
+						}
 					}
 				}
 			}
@@ -634,6 +689,41 @@
 			return Point.distance(ptSpr1, ptSpr2);
 		}
 		
+		private function redesenhaSpr(spr:Sprite):void
+		{
+			spr.graphics.clear();
+			var item:Sprite = ligacoes[spriteLigacoes.indexOf(spr)];
+			
+			var end:Sprite = inicioLigacoes[item];
+			var ptSpr1:Point = item.parent.localToGlobal(new Point(item.x, item.y));
+			var ptSpr2:Point = end.parent.localToGlobal(new Point(end.x, end.y));
+			
+			spr.graphics.lineStyle(15, 0xFFFF80, 0);
+			spr.graphics.moveTo(ptSpr1.x, ptSpr1.y);
+			spr.graphics.lineTo(ptSpr2.x, ptSpr2.y);
+			
+			var cor:uint
+			var tipoIni:String = Molecula(item.parent).getTipoLigacao(item);
+			var tipoFim:String = Molecula(end.parent).getTipoLigacao(end);
+			
+			if (tipoIni == tipoFim) cor = colors[tipoIni];
+			else cor = colors[Molecula.TIPO_INDEFINIDO];
+			
+			if (item is MarcacaoPonte) {
+				//spriteLigacoes.graphics.lineStyle(lineTickness, colorPonte);
+				//dashTo(spriteLigacoes.graphics, ptSpr1.x, ptSpr1.y, ptSpr2.x, ptSpr2.y, dashLen, dashGap);
+				spr.graphics.lineStyle(lineTickness, cor);
+				dashTo(spr.graphics, ptSpr1.x, ptSpr1.y, ptSpr2.x, ptSpr2.y, dashLen, dashGap);
+			}else {
+				//spriteLigacoes.graphics.lineStyle(lineTickness, colorCovalente);
+				//spriteLigacoes.graphics.moveTo(ptSpr1.x, ptSpr1.y);
+				//spriteLigacoes.graphics.lineTo(ptSpr2.x, ptSpr2.y);
+				spr.graphics.lineStyle(lineTickness, cor);
+				spr.graphics.moveTo(ptSpr1.x, ptSpr1.y);
+				spr.graphics.lineTo(ptSpr2.x, ptSpr2.y);
+			}
+		}
+		
 		private var dashLen:Number = 3;
 		private var dashGap:Number = 3;
 		private function desenhaLigacoes():void 
@@ -642,8 +732,10 @@
 			removeSprites();
 			var end:Sprite;
 			
-			for each (var item:Sprite in ligacoes) 
+			//for each (var item:Sprite in ligacoes) 
+			for (var i:int = 0; i < ligacoes.length; i++) 
 			{
+				var item:Sprite = ligacoes[i];
 				var spr:Sprite = new Sprite();
 				spriteLigacoes.push(spr);
 				layerAtividade.addChild(spr);
@@ -659,16 +751,23 @@
 				spr.graphics.moveTo(ptSpr1.x, ptSpr1.y);
 				spr.graphics.lineTo(ptSpr2.x, ptSpr2.y);
 				
+				var cor:uint
+				var tipoIni:String = Molecula(item.parent).getTipoLigacao(item);
+				var tipoFim:String = Molecula(end.parent).getTipoLigacao(end);
+				
+				if (tipoIni == tipoFim) cor = colors[tipoIni];
+				else cor = colors[Molecula.TIPO_INDEFINIDO];
+				
 				if (item is MarcacaoPonte) {
 					//spriteLigacoes.graphics.lineStyle(lineTickness, colorPonte);
 					//dashTo(spriteLigacoes.graphics, ptSpr1.x, ptSpr1.y, ptSpr2.x, ptSpr2.y, dashLen, dashGap);
-					spr.graphics.lineStyle(lineTickness, colorPonte);
+					spr.graphics.lineStyle(lineTickness, cor);
 					dashTo(spr.graphics, ptSpr1.x, ptSpr1.y, ptSpr2.x, ptSpr2.y, dashLen, dashGap);
 				}else {
 					//spriteLigacoes.graphics.lineStyle(lineTickness, colorCovalente);
 					//spriteLigacoes.graphics.moveTo(ptSpr1.x, ptSpr1.y);
 					//spriteLigacoes.graphics.lineTo(ptSpr2.x, ptSpr2.y);
-					spr.graphics.lineStyle(lineTickness, colorCovalente);
+					spr.graphics.lineStyle(lineTickness, cor);
 					spr.graphics.moveTo(ptSpr1.x, ptSpr1.y);
 					spr.graphics.lineTo(ptSpr2.x, ptSpr2.y);
 				}
@@ -698,10 +797,19 @@
 		private function clickLigacao(e:MouseEvent):void 
 		{
 			removeSelection();
-			menuTipoLigacao.visible = true;
 			ligacaoSelecionada = Sprite(e.target);
 			ligacaoSelecionada.filters = [moleculaFilter];
 			ligacaoSelecionada.removeEventListener(MouseEvent.MOUSE_OUT, outLigacao);
+			var sprIni:Sprite = ligacoes[spriteLigacoes.indexOf(ligacaoSelecionada)];
+			var sprFim:Sprite = inicioLigacoes[sprIni];
+			
+			var tipoIni:String = Molecula(sprIni.parent).getTipoLigacao(sprIni);
+			var tipoFim:String = Molecula(sprFim.parent).getTipoLigacao(sprFim);
+			
+			if (tipoIni == tipoFim) menuTipoLigacao[tipoIni].selected = true;
+			else menuTipoLigacao.indefinido.selected = true;
+			
+			Actuate.tween(menuTipoLigacao, 0.3, { x:posInicialMenuLigacao } );
 		}
 		
 		private function removeSprites():void 

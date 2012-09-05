@@ -35,12 +35,14 @@
 	{
 		private var moleculas:Vector.<Molecula> = new Vector.<Molecula>();
 		private var moleculaFilter:GlowFilter = new GlowFilter(0x000000, 0.8, 10, 10);
+		private var erroFilter:GlowFilter = new GlowFilter(0xFF0000, 1, 12, 12);
 		
 		private var colorCovalente:uint = 0x000000;
 		private var colorPonte:uint = 0xFF0000;
 		private var lineTickness:int = 2;
 		
 		private var spriteLigacoes:Sprite;
+		private var arrayElementos:Array = [];
 		
 		override protected function init():void 
 		{
@@ -113,16 +115,17 @@
 					break;
 				case "hInvert":
 					inverteObjeto(movingObject, "h");
-					procuraLigacoes();
 					return;
 				case "vInvert":
 					inverteObjeto(movingObject, "v");
-					procuraLigacoes();
 					return;
 				default:
 					return;
 			}
 			
+			newObj.tipo = e.target.name;
+			var tt:ToolTip = new ToolTip(newObj, pegaTipo(e.target.name), 10, 0.8, 100, 0.2, 0.2);
+			layerAtividade.addChild(tt);
 			newObj.scaleX = newObj.scaleY = 0.75;
 			newObj.addEventListener(MouseEvent.MOUSE_DOWN, downMoleculasListener);
 			moleculas.push(newObj);
@@ -139,6 +142,60 @@
 			stage.addEventListener(MouseEvent.MOUSE_MOVE, movingMoleculas);
 		}
 		
+		private function criaObjeto(tipo:String, posX:Number, posY:Number, rotacao:Number = 0, scaleX:Number = NaN, scaleY:Number = NaN):void
+		{
+			var newObj:Molecula;
+			switch (tipo) {
+				case "fosfato":
+					newObj = new Fosfato();
+					break;
+				case "basePirimidica":
+					newObj = new BasePirimidica();
+					break;
+				case "basePurica":
+					newObj = new BasePurica();
+					break;
+				case "pentose":
+					newObj = new Pentose();
+					break;
+			}
+			
+			newObj.tipo = tipo;
+			var tt:ToolTip = new ToolTip(newObj, pegaTipo(tipo), 10, 0.8, 100, 0.2, 0.2);
+			layerAtividade.addChild(tt);
+			if (isNaN(scaleX)) newObj.scaleX = 0.75;
+			else newObj.scaleX = scaleX;
+			if (isNaN(scaleY)) newObj.scaleY = 0.75;
+			else newObj.scaleY = scaleY;
+			newObj.x = posX;
+			newObj.y = posY;
+			newObj.rotation = rotacao;
+			newObj.addEventListener(MouseEvent.MOUSE_DOWN, downMoleculasListener);
+			moleculas.push(newObj);
+			layerAtividade.addChild(newObj);
+			layerAtividade.setChildIndex(spriteLigacoes, layerAtividade.numChildren - 1);
+		}
+		
+		private function pegaTipo(tipo:String):String 
+		{
+			switch (tipo) {
+				case "fosfato":
+					return "Fosfato";
+					break;
+				case "basePirimidica":
+					return "Base pirimídica";
+					break;
+				case "basePurica":
+					return "Base púrica";
+					break;
+				case "pentose":
+					return "Pentose";
+					break;
+			}
+			
+			return "";
+		}
+		
 		private function removeSelection():void
 		{
 			if (movingObject != null) {
@@ -147,17 +204,23 @@
 				lock(opcoes.hInvert);
 				lock(opcoes.vInvert);
 			}
+			
+			for each (var item:Molecula in moleculas) 
+			{
+				item.filters = [];
+			}
 		}
 		
 		private var permiteTween:Boolean = true;
 		private function inverteObjeto(target:MovieClip, direcao:String):void 
 		{
 			if (!permiteTween) return;
+			spriteLigacoes.graphics.clear();
 			if (direcao == "h") {
 				Actuate.tween(target, 0.3, { scaleX:target.scaleX * -1 } ).onComplete(liberaTween);
 			}else {
 				//target.scaleY *= -1;
-				Actuate.tween(target, 0.3, {rotation:target.rotation + 72}).onComplete(liberaTween);
+				Actuate.tween(target, 0.3, {rotation:target.rotation - 72}).onComplete(liberaTween);
 			}
 			permiteTween = false;
 		}
@@ -165,11 +228,205 @@
 		private function liberaTween():void 
 		{
 			permiteTween = true;
+			procuraLigacoes();
+			saveStatus();
 		}
 		
 		private function finalizaExec(e:MouseEvent):void 
 		{
+			removeSelection();
 			
+			var acertos:int = 0;
+			var total:int = 0;
+			for (var i:int = 0; i < moleculas.length; i++) 
+			{
+				var molInicial:Molecula = moleculas[i];
+				trace(molInicial.temLigacao());
+				if (molInicial.temLigacao()) {
+					total++;
+					switch (molInicial.tipo) {
+						case "fosfato":
+							if (analisaFosfato(molInicial)) acertos++;
+							else molInicial.filters = [erroFilter];
+							break;
+						case "basePirimidica":
+							if (analisaBase(molInicial)) acertos++;
+							else molInicial.filters = [erroFilter];
+							break;
+						case "basePurica":
+							if (analisaBase(molInicial)) acertos++;
+							else molInicial.filters = [erroFilter];
+							break;
+						case "pentose":
+							if (analisaPentose(molInicial)) acertos++;
+							else molInicial.filters = [erroFilter];
+							break;
+					}
+				}
+			}
+			
+			score = Math.round(acertos / total * 100);
+			feedbackScreen.setText("Sua pontuação foi de " + score + "%." + (score < 99 ? "\nAs moléculas com erro estão destacadas em vermelho." : ""));
+		}
+		
+		private function analisaPentose(mol:Molecula):Boolean
+		{
+			var pentoseA:Sprite = mol.a;
+			var pentoseB:Sprite = mol.b;
+			var pentoseC:Sprite = mol.c;
+			
+			var ligA:Sprite = pegaLigacao(pentoseA);
+			var ligB:Sprite = pegaLigacao(pentoseB);
+			var ligC:Sprite = pegaLigacao(pentoseC);
+			
+			if (ligA != null && ligB != null) {
+				//Se ambos estiverem ligados em uma mesma molécula (erro)
+				if (ligA.parent != ligB.parent) {
+					if (Molecula(ligA.parent).tipo != "fosfato") {
+						return false;
+					}
+					if (Molecula(ligB.parent).tipo != "fosfato") {
+						return false;
+					}
+				}else {
+					return false;
+				}
+			}else if (ligA != null) {
+				if (Molecula(ligA.parent).tipo != "fosfato") {
+					return false;
+				}
+			}else if (ligB != null) {
+				if (Molecula(ligB.parent).tipo != "fosfato") {
+					return false;
+				}
+			}
+			
+			if (ligC != null) {
+				trace(ligC.name);
+				if (Molecula(ligC.parent).tipo != "basePirimidica" && Molecula(ligC.parent).tipo != "basePurica") {
+					return false;
+				}else if(Molecula(ligC.parent).tipo == "basePirimidica"){
+					if (ligC.name == "bp4") {
+						if ((Molecula(ligC.parent).scaleX < 0 && Molecula(ligC.parent).rotation == 0 && mol.scaleX > 0 && mol.rotation == 0) ||
+							(Molecula(ligC.parent).scaleX > 0 && Molecula(ligC.parent).rotation == 0 && mol.scaleX > 0 && Math.abs(mol.rotation + 144) < 1)){
+						}else {
+							return false;
+						}
+					}else {
+						return false;
+					}
+				}else {
+					if (ligC.name == "bp4") {
+						if ((Molecula(ligC.parent).scaleX > 0 && Molecula(ligC.parent).rotation == 0 && mol.scaleX > 0 && mol.rotation == 0) ||
+							(Molecula(ligC.parent).scaleX < 0 && Molecula(ligC.parent).rotation == 0 && mol.scaleX > 0 && Math.abs(mol.rotation + 144) < 1)){
+						}else {
+							return false;
+						}
+					}else {
+						return false;
+					}
+				}
+			}
+			
+			return true;
+		}
+		
+		private function analisaBase(mol:Molecula):Boolean 
+		{
+			var baseA:Sprite = mol.bp1;
+			var baseB:Sprite = mol.bp2;
+			var baseC:Sprite = mol.bp3;
+			var baseD:Sprite = mol.bp4;
+			
+			var ligA:Sprite = pegaLigacao(baseA);
+			var ligB:Sprite = pegaLigacao(baseB);
+			var ligC:Sprite = pegaLigacao(baseC);
+			var ligD:Sprite = pegaLigacao(baseD);
+			
+			if (ligA != null && ligB != null && ligC != null) {
+				if (ligA.parent != ligB.parent || ligA.parent != ligC.parent || ligB.parent != ligC.parent) {
+					return false;
+				}
+			}else if (ligA != null || ligB != null || ligC != null) {
+				return false;
+			}
+			
+			if (ligD != null) {
+				if (Molecula(ligD.parent).tipo != "pentose") {
+					return false;
+				}else if (ligD.name == "c") {
+					if (mol.tipo == "basePirimidica") {
+						if ((mol.scaleX < 0 && mol.rotation == 0 && Molecula(ligD.parent).scaleX > 0 && Molecula(ligD.parent).rotation == 0) ||
+							(mol.scaleX > 0 && mol.rotation == 0 && Molecula(ligD.parent).scaleX > 0 && Math.abs(Molecula(ligD.parent).rotation + 144) < 1)){
+						}else {
+							return false;
+						}
+					}else {
+						if ((mol.scaleX > 0 && mol.rotation == 0 && Molecula(ligD.parent).scaleX > 0 && Molecula(ligD.parent).rotation == 0) ||
+							(mol.scaleX < 0 && mol.rotation == 0 && Molecula(ligD.parent).scaleX > 0 && Math.abs(Molecula(ligD.parent).rotation + 144) < 1)){
+						}else {
+							return false;
+						}
+					}
+				}else {
+					return false;
+				}
+			}
+			
+			return true;
+		}
+		
+		private function analisaFosfato(mol:Molecula):Boolean
+		{
+			var fosfatoA:Sprite = mol.a;
+			var fosfatoB:Sprite = mol.b;
+			
+			var ligA:Sprite = pegaLigacao(fosfatoA);
+			var ligB:Sprite = pegaLigacao(fosfatoB);
+			
+			//as 2 ligações possíveis foram feitas.
+			if (ligA != null && ligB != null) {
+				//Se ambos estiverem ligados em uma mesma molécula (erro)
+				if (ligA.parent != ligB.parent) {
+					if (Molecula(ligA.parent).tipo != "pentose") {
+						return false;
+					}else if (ligA.name != "a" && ligA.name != "b") {
+						return false;
+					}
+					if (Molecula(ligB.parent).tipo != "pentose") {
+						return false;
+					}else if (ligB.name != "a" && ligB.name != "b") {
+						return false;
+					}
+				}else {
+					return false;
+				}
+			}else if (ligA != null) {
+				if (Molecula(ligA.parent).tipo != "pentose") {
+					return false;
+				}else if (ligA.name != "a" && ligA.name != "b") {
+					return false;
+				}
+			}else if (ligB != null) {
+				if (Molecula(ligB.parent).tipo != "pentose") {
+					return false;
+				}else if (ligB.name != "a" && ligB.name != "b") {
+					return false;
+				}
+			}
+			
+			return true;
+		}
+		
+		private function pegaLigacao(spr:Sprite):Sprite
+		{
+			if (inicioLigacoes[spr] != null) {
+				return inicioLigacoes[spr];
+			}else if (fimLigacoes[spr] != null) {
+				return fimLigacoes[spr];
+			}
+			
+			return null;
 		}
 		
 		private function createAnswer():void 
@@ -183,8 +440,8 @@
 			movingObject = Molecula(e.target);
 			layerAtividade.setChildIndex(movingObject, layerAtividade.numChildren - 1);
 			layerAtividade.setChildIndex(spriteLigacoes, layerAtividade.numChildren - 1);
-			mouseDiff.x = movingObject.mouseX * movingObject.scaleX;
-			mouseDiff.y = movingObject.mouseY * movingObject.scaleY;
+			mouseDiff.x = (mouseX - movingObject.x);// * movingObject.scaleX;
+			mouseDiff.y = (mouseY - movingObject.y); // * movingObject.scaleY;
 			stage.addEventListener(MouseEvent.MOUSE_UP, upMoleculasListener);
 			stage.addEventListener(MouseEvent.MOUSE_MOVE, movingMoleculas);
 		}
@@ -198,6 +455,39 @@
 			procuraLigacoes();
 		}
 		
+		private function upMoleculasListener(e:MouseEvent):void 
+		{
+			stage.removeEventListener(MouseEvent.MOUSE_MOVE, movingMoleculas);
+			stage.removeEventListener(MouseEvent.MOUSE_UP, upMoleculasListener);
+			
+			if (movingObject.y > 530) {
+				moleculas.splice(moleculas.indexOf(movingObject), 1);
+				layerAtividade.removeChild(movingObject);
+				movingObject = null;
+			}else {
+				movingObject.filters = [moleculaFilter];
+				
+				lock(opcoes.vInvert);
+				lock(opcoes.hInvert);
+				switch (movingObject.tipo) {
+					case "fosfato":
+						unlock(opcoes.hInvert);
+						break;
+					case "basePirimidica":
+						unlock(opcoes.hInvert);
+						break;
+					case "basePurica":
+						unlock(opcoes.hInvert);
+						break;
+					case "pentose":
+						unlock(opcoes.vInvert);
+						break;
+				}
+			}
+			
+			saveStatus();
+		}
+		
 		private var ligacoes:Vector.<Sprite> = new Vector.<Sprite>();
 		private var inicioLigacoes:Dictionary = new Dictionary();
 		private var fimLigacoes:Dictionary = new Dictionary();
@@ -209,18 +499,22 @@
 			inicioLigacoes = new Dictionary();
 			fimLigacoes = new Dictionary();
 			
-			var vetorDist:Array = getTabela();
+			//var vetorDist:Array = 
+			getTabela();
 			var nElementos:int = getNelementos();
 			
-			var triple:Array = getMinDist(vetorDist);
+			var triple:Array = getMinDist(arrayElementos);
 			while (triple[2] <= minDist) 
 			{
-				if(inicioLigacoes[triple[0]] == null && inicioLigacoes[triple[1]] == null && fimLigacoes[triple[0]] == null && fimLigacoes[triple[1]] == null){
+				if (inicioLigacoes[triple[0]] == null && inicioLigacoes[triple[1]] == null && fimLigacoes[triple[0]] == null && fimLigacoes[triple[1]] == null) {
 					ligacoes.push(triple[0]);
 					inicioLigacoes[triple[0]] = triple[1];
 					fimLigacoes[triple[1]] = triple[0];
+					
+					Molecula(triple[0].parent).setLigacao(triple[0], triple[1]);
+					Molecula(triple[1].parent).setLigacao(triple[1], triple[0]);
 				}
-				triple = getMinDist(vetorDist);
+				triple = getMinDist(arrayElementos);
 			}
 			
 			desenhaLigacoes();
@@ -263,15 +557,17 @@
 			return arrReturn;
 		}
 		
-		private function getTabela():Array
+		private function getTabela():void
 		{
 			var nElementos:int = getNelementos();
-			var arrayElementos:Array = new Array();
+			//arrayElementos = new Array();
+			arrayElementos.splice(0, arrayElementos.length);
 			var auxI:int = 0;
 			var auxJ:int = 0;
 			arrayElementos[nElementos] = new Array();
 			for (var i:int = 0; i < moleculas.length; i++) 
 			{
+				moleculas[i].resetLigacoes();
 				for (var j:int = 0; j < moleculas[i].pontosLigacao.length; j++) 
 				{
 					arrayElementos[auxI] = new Array();
@@ -300,7 +596,7 @@
 				}
 			}
 			
-			return arrayElementos;
+			//return arrayElementos;
 		}
 		
 		private function getNelementos():int
@@ -344,29 +640,26 @@
 			}
 		}
 		
-		private function upMoleculasListener(e:MouseEvent):void 
-		{
-			stage.removeEventListener(MouseEvent.MOUSE_MOVE, movingMoleculas);
-			stage.removeEventListener(MouseEvent.MOUSE_UP, upMoleculasListener);
-			
-			if (movingObject.y > 530) {
-				moleculas.splice(moleculas.indexOf(movingObject), 1);
-				layerAtividade.removeChild(movingObject);
-				movingObject = null;
-			}else {
-				movingObject.filters = [moleculaFilter];
-				unlock(opcoes.hInvert);
-				unlock(opcoes.vInvert);
-			}
-		}
-		
-		
 		private function saveStatusForRecovery(e:MouseEvent = null):void
 		{
 			var status:Object = new Object();
 			
 			status.completed = completed;
 			status.score = score;
+			status.moleculas = new Object();
+			status.moleculas.qtd = moleculas.length;
+			
+			for (var i:int = 0; i < moleculas.length; i++) 
+			{
+				var obj:Molecula = moleculas[i];
+				status.moleculas[String(i)] = new Object();
+				status.moleculas[String(i)].posX = obj.x;
+				status.moleculas[String(i)].posY = obj.y;
+				status.moleculas[String(i)].rotacao = obj.rotation;
+				status.moleculas[String(i)].scaleX = obj.scaleX;
+				status.moleculas[String(i)].scaleY = obj.scaleY;
+				status.moleculas[String(i)].tipo = obj.tipo;
+			}
 			
 			mementoSerialized = JSON.encode(status);
 		}
@@ -375,10 +668,17 @@
 		{
 			var status:Object = JSON.decode(memento);
 			
+			for (var i:int = 0; i < status.moleculas.qtd; i++) 
+			{
+				criaObjeto(status.moleculas[String(i)].tipo, status.moleculas[String(i)].posX, status.moleculas[String(i)].posY, status.moleculas[String(i)].rotacao, status.moleculas[String(i)].scaleX, status.moleculas[String(i)].scaleY);
+			}
+			
 			if (!connected) {
 				completed = status.completed;
 				score = status.score;
 			}
+			
+			procuraLigacoes();
 		}
 		
 		override public function reset(e:MouseEvent = null):void
@@ -400,7 +700,7 @@
 				score = 0;
 			}
 			
-			saveStatus();
+			//saveStatus();
 		}
 		
 		private function dashTo (graphics:Graphics, startx:Number, starty:Number, endx:Number, endy:Number, len:Number, gap:Number) : void {
@@ -465,6 +765,7 @@
 				
 				tutoSequence = ["Veja aqui as orientações.",
 								"Clique e arrste sobre uma molécula para criá-la.",
+								"Utilize esses controles para modificar (rotacionar e inverter) as peças.",
 								"Posicione as moléculas para montar um segmento de DNA.",
 								"Ao movimentar as moléculas serão formadas as ligações (covalente ou ponte de hidrogênio)...",
 								"...de acordo com a proximidade entre os elementos que formam a ligação.",
@@ -472,6 +773,7 @@
 				
 				pointsTuto = 	[new Point(590, 500),
 								new Point(190 , 530),
+								new Point(490 , 530),
 								new Point(180 , 180),
 								new Point(220 , 220),
 								new Point(290 , 260),
@@ -479,6 +781,7 @@
 								
 				tutoBaloonPos = [[CaixaTexto.RIGHT, CaixaTexto.FIRST],
 								[CaixaTexto.BOTTON, CaixaTexto.FIRST],
+								[CaixaTexto.BOTTON, CaixaTexto.LAST],
 								["", ""],
 								["", ""],
 								["", ""],

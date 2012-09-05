@@ -15,6 +15,7 @@ package
 	{
 		private var _pontosLigacao:Vector.<Sprite> = new Vector.<Sprite>();
 		private var ligacoesAtuais:Dictionary = new Dictionary();
+		public var tipo:String;
 		
 		public function Molecula() 
 		{
@@ -49,9 +50,24 @@ package
 			return _pontosLigacao;
 		}
 		
-		public function setLigacao(pontoExterno:Sprite, pontoInterno:Sprite):void
+		public function setLigacao(pontoInterno:Sprite, pontoExterno:Sprite):void
 		{
 			ligacoesAtuais[pontoInterno] = pontoExterno;
+		}
+		
+		public function temLigacao():Boolean
+		{
+			var ret:Boolean = false;
+			for each (var item:Sprite in pontosLigacao) 
+			{
+				if (ligacoesAtuais[item] != null) ret = true;
+			}
+			return ret;
+		}
+		
+		public function resetLigacoes():void
+		{
+			ligacoesAtuais = new Dictionary();
 		}
 		
 		public function removeLigacao(pontoInterno:Sprite):void

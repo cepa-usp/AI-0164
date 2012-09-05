@@ -13,13 +13,19 @@ package
 	 */
 	public class Molecula extends MovieClip
 	{
+		public static const TIPO_INDEFINIDO:String = "indefinido";
+		public static const TIPO_COVALENTE:String = "covalente";
+		public static const TIPO_PONTE:String = "ponteHidrogenio";
+		
 		private var _pontosLigacao:Vector.<Sprite> = new Vector.<Sprite>();
+		private var _tiposPontos:Vector.<String> = new Vector.<String>();
 		private var ligacoesAtuais:Dictionary = new Dictionary();
 		public var tipo:String;
 		
 		public function Molecula() 
 		{
 			this.buttonMode = true;
+			this.mouseChildren = false;
 			pegaLigacoes();
 		}
 		
@@ -30,6 +36,7 @@ package
 				var child:DisplayObject = getChildAt(i);
 				if (child is MarcacaoCovalente || child is MarcacaoPonte) {
 					_pontosLigacao.push(child);
+					_tiposPontos.push(TIPO_INDEFINIDO);
 				}
 			}
 		}
@@ -48,6 +55,11 @@ package
 		public function get pontosLigacao():Vector.<Sprite> 
 		{
 			return _pontosLigacao;
+		}
+		
+		public function get tiposPontos():Vector.<String> 
+		{
+			return _tiposPontos;
 		}
 		
 		public function setLigacao(pontoInterno:Sprite, pontoExterno:Sprite):void

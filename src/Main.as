@@ -34,6 +34,8 @@
 	public class Main extends BaseMain
 	{
 		private var moleculas:Vector.<Molecula> = new Vector.<Molecula>();
+		private var tiposLigacoes:Vector.<MovieClip> = new Vector.<MovieClip>();
+		
 		private var moleculaFilter:GlowFilter = new GlowFilter(0x000000, 0.8, 10, 10);
 		private var erroFilter:GlowFilter = new GlowFilter(0xFF0000, 1, 12, 12);
 		
@@ -41,7 +43,8 @@
 		private var colorPonte:uint = 0xFF0000;
 		private var lineTickness:int = 2;
 		
-		private var spriteLigacoes:Sprite;
+		//private var spriteLigacoes:Sprite;
+		private var spriteLigacoes:Vector.<Sprite> = new Vector.<Sprite>();
 		private var arrayElementos:Array = [];
 		
 		override protected function init():void 
@@ -69,8 +72,10 @@
 			layerAtividade.addChild(entrada);
 			layerAtividade.addChild(finaliza);
 			layerAtividade.addChild(opcoes);
-			spriteLigacoes = new Sprite();
-			layerAtividade.addChild(spriteLigacoes);
+			layerAtividade.addChild(menuTipoLigacao);
+			menuTipoLigacao.visible = false;
+			//spriteLigacoes = new Sprite();
+			//layerAtividade.addChild(spriteLigacoes);
 			lock(opcoes.hInvert);
 			lock(opcoes.vInvert);
 		}
@@ -92,6 +97,12 @@
 					movingObject = null;
 					lock(opcoes.hInvert);
 					lock(opcoes.vInvert);
+				}
+				
+				if (ligacaoSelecionada != null) {
+					ligacaoSelecionada.filters = [];
+					menuTipoLigacao.visible = false;
+					ligacaoSelecionada = null;
 				}
 			}
 		}
@@ -130,7 +141,7 @@
 			newObj.addEventListener(MouseEvent.MOUSE_DOWN, downMoleculasListener);
 			moleculas.push(newObj);
 			layerAtividade.addChild(newObj);
-			layerAtividade.setChildIndex(spriteLigacoes, layerAtividade.numChildren - 1);
+			//layerAtividade.setChildIndex(spriteLigacoes, layerAtividade.numChildren - 1);
 			
 			removeSelection();
 			movingObject = newObj;
@@ -173,7 +184,7 @@
 			newObj.addEventListener(MouseEvent.MOUSE_DOWN, downMoleculasListener);
 			moleculas.push(newObj);
 			layerAtividade.addChild(newObj);
-			layerAtividade.setChildIndex(spriteLigacoes, layerAtividade.numChildren - 1);
+			//layerAtividade.setChildIndex(spriteLigacoes, layerAtividade.numChildren - 1);
 		}
 		
 		private function pegaTipo(tipo:String):String 
@@ -205,6 +216,12 @@
 				lock(opcoes.vInvert);
 			}
 			
+			if (ligacaoSelecionada != null) {
+				ligacaoSelecionada.filters = [];
+				menuTipoLigacao.visible = false;
+				ligacaoSelecionada = null;
+			}
+			
 			for each (var item:Molecula in moleculas) 
 			{
 				item.filters = [];
@@ -215,7 +232,8 @@
 		private function inverteObjeto(target:MovieClip, direcao:String):void 
 		{
 			if (!permiteTween) return;
-			spriteLigacoes.graphics.clear();
+			//spriteLigacoes.graphics.clear();
+			removeSprites();
 			if (direcao == "h") {
 				Actuate.tween(target, 0.3, { scaleX:target.scaleX * -1 } ).onComplete(liberaTween);
 			}else {
@@ -241,7 +259,6 @@
 			for (var i:int = 0; i < moleculas.length; i++) 
 			{
 				var molInicial:Molecula = moleculas[i];
-				trace(molInicial.temLigacao());
 				if (molInicial.temLigacao()) {
 					total++;
 					switch (molInicial.tipo) {
@@ -439,7 +456,7 @@
 			removeSelection();
 			movingObject = Molecula(e.target);
 			layerAtividade.setChildIndex(movingObject, layerAtividade.numChildren - 1);
-			layerAtividade.setChildIndex(spriteLigacoes, layerAtividade.numChildren - 1);
+			//layerAtividade.setChildIndex(spriteLigacoes, layerAtividade.numChildren - 1);
 			mouseDiff.x = (mouseX - movingObject.x);// * movingObject.scaleX;
 			mouseDiff.y = (mouseY - movingObject.y); // * movingObject.scaleY;
 			stage.addEventListener(MouseEvent.MOUSE_UP, upMoleculasListener);
@@ -621,23 +638,81 @@
 		private var dashGap:Number = 3;
 		private function desenhaLigacoes():void 
 		{
-			spriteLigacoes.graphics.clear();
+			//spriteLigacoes.graphics.clear();
+			removeSprites();
 			var end:Sprite;
 			
 			for each (var item:Sprite in ligacoes) 
 			{
+				var spr:Sprite = new Sprite();
+				spriteLigacoes.push(spr);
+				layerAtividade.addChild(spr);
+				spr.buttonMode = true;
+				spr.addEventListener(MouseEvent.MOUSE_OVER, overLigacao);
+				spr.addEventListener(MouseEvent.CLICK, clickLigacao);
+				
 				end = inicioLigacoes[item];
 				var ptSpr1:Point = item.parent.localToGlobal(new Point(item.x, item.y));
 				var ptSpr2:Point = end.parent.localToGlobal(new Point(end.x, end.y));
+				
+				spr.graphics.lineStyle(15, 0xFFFF80, 0);
+				spr.graphics.moveTo(ptSpr1.x, ptSpr1.y);
+				spr.graphics.lineTo(ptSpr2.x, ptSpr2.y);
+				
 				if (item is MarcacaoPonte) {
-					spriteLigacoes.graphics.lineStyle(lineTickness, colorPonte);
-					dashTo(spriteLigacoes.graphics, ptSpr1.x, ptSpr1.y, ptSpr2.x, ptSpr2.y, dashLen, dashGap);
+					//spriteLigacoes.graphics.lineStyle(lineTickness, colorPonte);
+					//dashTo(spriteLigacoes.graphics, ptSpr1.x, ptSpr1.y, ptSpr2.x, ptSpr2.y, dashLen, dashGap);
+					spr.graphics.lineStyle(lineTickness, colorPonte);
+					dashTo(spr.graphics, ptSpr1.x, ptSpr1.y, ptSpr2.x, ptSpr2.y, dashLen, dashGap);
 				}else {
-					spriteLigacoes.graphics.lineStyle(lineTickness, colorCovalente);
-					spriteLigacoes.graphics.moveTo(ptSpr1.x, ptSpr1.y);
-					spriteLigacoes.graphics.lineTo(ptSpr2.x, ptSpr2.y);
+					//spriteLigacoes.graphics.lineStyle(lineTickness, colorCovalente);
+					//spriteLigacoes.graphics.moveTo(ptSpr1.x, ptSpr1.y);
+					//spriteLigacoes.graphics.lineTo(ptSpr2.x, ptSpr2.y);
+					spr.graphics.lineStyle(lineTickness, colorCovalente);
+					spr.graphics.moveTo(ptSpr1.x, ptSpr1.y);
+					spr.graphics.lineTo(ptSpr2.x, ptSpr2.y);
 				}
 			}
+		}
+		
+		private var ligacaoSelecionada:Sprite;
+		private var filterLigacao:GlowFilter = new GlowFilter(0x00FF00, 1, 12, 12);
+		private function overLigacao(e:MouseEvent):void 
+		{
+			var lig:Sprite = Sprite(e.target);
+			if (ligacaoSelecionada != null) {
+				if (ligacaoSelecionada == lig) return;
+			}
+			
+			lig.addEventListener(MouseEvent.MOUSE_OUT, outLigacao);
+			lig.filters = [filterLigacao];
+		}
+		
+		private function outLigacao(e:MouseEvent):void 
+		{
+			var lig:Sprite = Sprite(e.target);
+			lig.removeEventListener(MouseEvent.MOUSE_OUT, outLigacao);
+			lig.filters = [];
+		}
+		
+		private function clickLigacao(e:MouseEvent):void 
+		{
+			removeSelection();
+			menuTipoLigacao.visible = true;
+			ligacaoSelecionada = Sprite(e.target);
+			ligacaoSelecionada.filters = [moleculaFilter];
+			ligacaoSelecionada.removeEventListener(MouseEvent.MOUSE_OUT, outLigacao);
+		}
+		
+		private function removeSprites():void 
+		{
+			for (var i:int = 0; i < spriteLigacoes.length; i++) 
+			{
+				layerAtividade.removeChild(spriteLigacoes[i]);
+				spriteLigacoes[i].removeEventListener(MouseEvent.MOUSE_OVER, overLigacao);
+				spriteLigacoes[i].removeEventListener(MouseEvent.CLICK, clickLigacao);
+			}
+			spriteLigacoes.splice(0, spriteLigacoes.length);
 		}
 		
 		private function saveStatusForRecovery(e:MouseEvent = null):void
@@ -689,7 +764,8 @@
 			}
 			
 			moleculas.splice(0, moleculas.length);
-			spriteLigacoes.graphics.clear();
+			//spriteLigacoes.graphics.clear();
+			removeSprites();
 			lock(opcoes.hInvert);
 			lock(opcoes.vInvert);
 			

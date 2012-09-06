@@ -56,6 +56,11 @@
 		private var spriteLigacoes:Vector.<Sprite> = new Vector.<Sprite>();
 		private var arrayElementos:Array = [];
 		
+		private var minFosfato:int = 6;
+		private var minPentose:int = 6;
+		private var minPirimidica:int = 3;
+		private var minPurica:int = 3;
+		
 		override protected function init():void 
 		{
 			organizeLayers();
@@ -112,7 +117,7 @@
 		
 		private function keyUpEvent(e:KeyboardEvent):void 
 		{
-			trace(e.keyCode);
+			//trace(e.keyCode);
 			if (e.keyCode == Keyboard.DELETE) {
 				if (movingObject != null) {
 					layerAtividade.removeChild(movingObject);
@@ -319,6 +324,12 @@
 		{
 			removeSelection();
 			
+			var qtd:Dictionary = new Dictionary();
+			qtd["fosfato"] = 0;
+			qtd["basePirimidica"] = 0;
+			qtd["basePurica"] = 0;
+			qtd["pentose"] = 0;
+			
 			var acertosMol:int = 0;
 			var totalMol:int = 0;
 			for (var i:int = 0; i < moleculas.length; i++) 
@@ -344,6 +355,7 @@
 							else molInicial.filters = [erroFilter];
 							break;
 					}
+					qtd[molInicial.tipo] += 1;
 				}
 			}
 			
@@ -379,16 +391,34 @@
 			
 			var scoreLigacoes:int = Math.round(acertosLig / totalLig * 100);
 			
-			score = Math.round((acertosLig + acertosMol) / (totalLig + totalMol)* 100);
-			//score = Math.round((acertosLig + acertosMol) / (totalLig + totalMol)* 50);
+			//score = Math.round((acertosLig + acertosMol) / (totalLig + totalMol)* 100);
+			score = Math.round((acertosLig + acertosMol) / (totalLig + totalMol) * 50);
 			
-			var estruturaCorreta:Boolean = avaliaEstrutura();
-			//if (estruturaCorreta) score += 50;
+			var quantidadesMinimasAtingidas:Boolean = atingiuQuantidades(qtd);
+			
+			var estruturaCorreta:Boolean = false;
+			if (scoreMoleculas > 99 && quantidadesMinimasAtingidas){
+				estruturaCorreta = avaliaEstrutura();
+				if (estruturaCorreta) score += 50;
+			}
 			
 			var feedBack:String = "Sua pontuação foi de " + score + "%.";
 			
-			if (scoreMoleculas < 99) feedBack += "\nAs moléculas com ligações incorretas estão destacadas em vermelho.";
-			else feedBack += "\nAs ligações entre as moléculas estão corretas.";
+			if (scoreMoleculas < 99) {
+				if (!quantidadesMinimasAtingidas) feedBack += "\nA quantidade mínima de elementos não foi atingida.";
+				feedBack += "\nA estrutura do DNA contém erros.";
+				feedBack += "\nAs moléculas com ligações incorretas estão destacadas em vermelho.";
+			}
+			else {
+				if (quantidadesMinimasAtingidas) {
+					if (estruturaCorreta) feedBack += "\nA estrutura do DNA está correta.";
+					else feedBack += "\nA estrutura do DNA contém erros.";
+				}else{
+					feedBack += "\nA quantidade mínima de elementos não foi atingida.";
+					feedBack += "\nA estrutura do DNA contém erros.";
+				}
+				feedBack += "\nAs ligações entre as moléculas estão corretas.";
+			}
 			
 			if (scoreLigacoes < 99) feedBack += "\nAs ligações definidas incorretamente, ou indefinidas, estão destacadas em vermelho.";
 			else feedBack += "\nOs tipos das ligações foram definidos corretamente.";
@@ -399,24 +429,118 @@
 			feedbackScreen.setText(feedBack);
 		}
 		
+		private function atingiuQuantidades(qtd:Dictionary):Boolean
+		{
+			var ret:Boolean = true;
+			
+			if (qtd["fosfato"] < minFosfato) ret = false;
+			if (qtd["basePirimidica"] < minPirimidica) ret = false;
+			if (qtd["basePurica"] < minPurica) ret = false;
+			if (qtd["pentose"] < minPentose) ret = false;
+			
+			return ret;
+		}
+		
 		private function avaliaEstrutura():Boolean 
 		{
-			var visitadas:Dictionary = new Dictionary();
-			var tipos:Vector.<String> = new Vector.<String>();
+			var listaEsquerda:Vector.<Molecula> = new Vector.<Molecula>();
+			var listaDireita:Vector.<Molecula> = new Vector.<Molecula>();
 			
-			for (var i:int = 0; i < moleculas.length; i++) 
+			for each (var item:Molecula in moleculas) 
 			{
-				var mol:Molecula = moleculas[i];
-				
-				if (visitadas[mol] == null) visitadas[mol] = 1;
+				if (item.tipo == "fosfato") {
+					if (item.scaleX > 0) {
+						if(item.temLigacao()) listaEsquerda.push(item);
+					}else {
+						if(item.temLigacao()) listaDireita.push(item);
+					}
+				}else if (item.tipo == "pentose") {
+					if (item.rotation != 0) {
+						if(item.temLigacao()) listaDireita.push(item);
+					}else {
+						if(item.temLigacao()) listaEsquerda.push(item);
+					}
+				}
+			}
+			
+			var esqOk:Boolean = analisaLista(listaEsquerda);
+			var dirOk:Boolean = analisaLista(listaDireita, true);
+			
+			//trace(esqOk, dirOk);
+			
+			return (esqOk && dirOk);
+		}
+		
+		private function analisaLista(lista:Vector.<Molecula>, inverso:Boolean = false ):Boolean 
+		{
+			var listaAuxF:Vector.<Molecula> = new Vector.<Molecula>();
+			var listaAuxP:Vector.<Molecula> = new Vector.<Molecula>();
+			var inicio:Molecula;
+			
+			var mol:Molecula;
+			for (var i:int = lista.length - 1; i >= 0 ; i--) 
+			{
+				mol = lista[i];
+				if (mol is Fosfato) listaAuxF.push(mol);
+				else listaAuxP.push(mol);
+			}
+			
+			organizaListaDecrescente(listaAuxF);
+			organizaListaDecrescente(listaAuxP);
+			
+			if (listaAuxF[0].conexaoPtInterno(listaAuxF[0].a) == null) {
+				inicio = listaAuxF[0];
+				listaAuxF.splice(listaAuxF.indexOf(inicio), 1);
+			}else if ((inverso ? listaAuxP[0].conexaoPtInterno(listaAuxP[0].b) : listaAuxP[0].conexaoPtInterno(listaAuxP[0].a)) == null) {
+				inicio = listaAuxP[0];
+				listaAuxP.splice(listaAuxP.indexOf(inicio), 1);
+			}else {
+				throw new Error("Lista sem cabeça.");
+			}
+			
+			var proximo:Molecula;
+			if (inverso) {
+				if (inicio.tipo == "fosfato") proximo = (inicio.conexaoPtInterno(inicio.b) != null ? Molecula(inicio.conexaoPtInterno(inicio.b).parent) : null);
+				else proximo = (inicio.conexaoPtInterno(inicio.a) != null ? Molecula(inicio.conexaoPtInterno(inicio.a).parent) : null);
+			}else{
+				proximo = (inicio.conexaoPtInterno(inicio.b) != null ? Molecula(inicio.conexaoPtInterno(inicio.b).parent) : null);
+			}
+			
+			while (proximo != null) {
+				if (listaAuxF.indexOf(proximo) >= 0) {
+					listaAuxF.splice(listaAuxF.indexOf(proximo), 1);
+				}else {
+					listaAuxP.splice(listaAuxP.indexOf(proximo), 1);
+				}
+				if (inverso) {
+					if (proximo.tipo == "fosfato") proximo = (proximo.conexaoPtInterno(proximo.b) != null ? Molecula(proximo.conexaoPtInterno(proximo.b).parent) : null);
+					else proximo = (proximo.conexaoPtInterno(proximo.a) != null ? Molecula(proximo.conexaoPtInterno(proximo.a).parent) : null);
+				}else{
+					proximo = (proximo.conexaoPtInterno(proximo.b) != null ? Molecula(proximo.conexaoPtInterno(proximo.b).parent) : null);
+				}
+			}
+			
+			if (listaAuxF.length > 0 || listaAuxP.length > 0) {
+				//Os elementos não estão todos ligados.
+				return false;
 			}
 			
 			return true;
 		}
 		
-		private function recursao(mol:Molecula):Boolean
+		private function organizaListaDecrescente(lista:Vector.<Molecula>):void
 		{
-			return true;
+			for (var j:int = 1; j < lista.length; j++) 
+			{
+				for (var k:int = j; k > 0; k--) 
+				{
+					if (lista[k].y < lista[k - 1].y) {
+						var aux:Molecula = lista[k-1];
+						lista[k-1] = lista[k];
+						lista[k] = aux;
+					}
+				}
+			}
 		}
 		
 		private function analisaPentose(mol:Molecula):Boolean
@@ -452,7 +576,7 @@
 			}
 			
 			if (ligC != null) {
-				trace(ligC.name);
+				//trace(ligC.name);
 				if (Molecula(ligC.parent).tipo != "basePirimidica" && Molecula(ligC.parent).tipo != "basePurica") {
 					return false;
 				}else if(Molecula(ligC.parent).tipo == "basePirimidica"){
@@ -1045,25 +1169,31 @@
 								"Clique e arrste sobre uma molécula para criá-la.",
 								"Utilize esses controles para modificar (rotacionar e inverter) as peças.",
 								"Posicione as moléculas para montar um segmento de DNA.",
+								"São necessárias " + minFosfato + " fosfatos, " + minPentose + " pentoses, " + minPirimidica + " bases pirimídicas e " + minPurica + " bases púricas.",
 								"Ao movimentar as moléculas serão formadas as ligações (covalente ou ponte de hidrogênio)...",
 								"...de acordo com a proximidade entre os elementos que formam a ligação.",
+								"Para apagar uma molécula basta arrastá-la para a barra inferior ou pressionar \"delete\" quando ela estiver selecionada.",
 								"Pressione \"terminei\" para avaliar sua resposta."];
 				
-				pointsTuto = 	[new Point(590, 500),
-								new Point(190 , 530),
-								new Point(490 , 563),
+				pointsTuto = 	[new Point(560, 550),
+								new Point(220 , 550),
+								new Point(480 , 550),
 								new Point(180 , 180),
+								new Point(200 , 200),
 								new Point(220 , 220),
-								new Point(290 , 260),
-								new Point(finaliza.x, finaliza.y + finaliza.height / 2)];
+								new Point(240 , 240),
+								new Point(180 , 260),
+								new Point(finaliza.x, finaliza.y - finaliza.height / 2)];
 								
-				tutoBaloonPos = [[CaixaTexto.RIGHT, CaixaTexto.FIRST],
+				tutoBaloonPos = [[CaixaTexto.BOTTON, CaixaTexto.LAST],
 								[CaixaTexto.BOTTON, CaixaTexto.FIRST],
 								[CaixaTexto.BOTTON, CaixaTexto.LAST],
 								["", ""],
 								["", ""],
 								["", ""],
-								[CaixaTexto.TOP, CaixaTexto.FIRST]];
+								["", ""],
+								["", ""],
+								[CaixaTexto.BOTTON, CaixaTexto.FIRST]];
 			}
 			balao.removeEventListener(BaseEvent.NEXT_BALAO, closeBalao);
 			

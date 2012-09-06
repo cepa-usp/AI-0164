@@ -132,6 +132,8 @@
 					lock(opcoes.vInvert);
 					procuraLigacoes();
 				}
+			}else if(e.keyCode == Keyboard.R){
+				recoverStatus(mementoSerialized);
 			}
 		}
 		
@@ -1075,7 +1077,7 @@
 				
 				for each (var item:Sprite in mol.pontosLigacao) 
 				{
-					if(status.moleculas[String(i)].tiposLigacao[item.name]) mol.setTipoLigacao(item, status.moleculas[String(i)].tipoLigacao[item.name]);
+					if(status.moleculas[String(i)].tiposLigacao[item.name]) mol.setTipoLigacao(item, status.moleculas[String(i)].tiposLigacao[item.name]);
 				}
 			}
 			

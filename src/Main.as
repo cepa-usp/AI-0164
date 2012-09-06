@@ -1173,13 +1173,14 @@
 				balao.visible = false;
 				
 				tutoSequence = ["Veja aqui as orientações.",
-								"Clique e arrste sobre uma molécula para criá-la.",
+								"Clique e arraste sobre uma molécula para criá-la.",
 								"Utilize esses controles para modificar (rotacionar e inverter) as peças.",
 								"Posicione as moléculas para montar um segmento de DNA.",
-								"São necessárias " + minFosfato + " fosfatos, " + minPentose + " pentoses, " + minPirimidica + " bases pirimídicas e " + minPurica + " bases púricas.",
+								"São necessárias no mínimo " + minFosfato + " fosfatos, " + minPentose + " pentoses, " + minPirimidica + " bases pirimídicas e " + minPurica + " bases púricas.",
 								"Ao movimentar as moléculas serão formadas as ligações (covalente ou ponte de hidrogênio)...",
 								"...de acordo com a proximidade entre os elementos que formam a ligação.",
 								"Para apagar uma molécula basta arrastá-la para a barra inferior ou pressionar \"delete\" quando ela estiver selecionada.",
+								"Clique sobre uma ligação para classificá-la (ligação covalente ou ponte de hidrogênio).",
 								"Pressione \"terminei\" para avaliar sua resposta."];
 				
 				pointsTuto = 	[new Point(560, 550),
@@ -1190,11 +1191,13 @@
 								new Point(220 , 220),
 								new Point(240 , 240),
 								new Point(180 , 260),
+								new Point(220 , 260),
 								new Point(finaliza.x, finaliza.y - finaliza.height / 2)];
 								
 				tutoBaloonPos = [[CaixaTexto.BOTTON, CaixaTexto.LAST],
 								[CaixaTexto.BOTTON, CaixaTexto.FIRST],
 								[CaixaTexto.BOTTON, CaixaTexto.LAST],
+								["", ""],
 								["", ""],
 								["", ""],
 								["", ""],

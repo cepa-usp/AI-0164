@@ -156,7 +156,7 @@ package BaseAssets
 				layerDialogo.addChild(statsScreen);
 			}
 			
-			botoes = new MenuBar();
+			botoes = new MenuBar(false);
 			//botoes.x = rect.width - botoes.BTN_WIDTH - 12;
 			botoes.y = rect.height - 12;
 			layerMenu.addChild(botoes);

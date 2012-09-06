@@ -16,12 +16,14 @@
 	import flash.display.Sprite;
 	import flash.display.Stage;
 	import flash.events.Event;
+	import flash.events.KeyboardEvent;
 	import flash.events.MouseEvent;
 	import flash.events.TimerEvent;
 	import flash.external.ExternalInterface;
 	import flash.filters.GlowFilter;
 	import flash.geom.Point;
 	import flash.geom.Rectangle;
+	import flash.ui.Keyboard;
 	import flash.utils.Dictionary;
 	import flash.utils.getDefinitionByName;
 	import flash.utils.getQualifiedClassName;
@@ -38,7 +40,9 @@
 		private var tiposLigacoes:Vector.<MovieClip> = new Vector.<MovieClip>();
 		
 		private var moleculaFilter:GlowFilter = new GlowFilter(0x000000, 0.8, 10, 10);
+		private var ligacaoFilter:GlowFilter = new GlowFilter(0x000000, 0.8, 10, 10, 4);
 		private var erroFilter:GlowFilter = new GlowFilter(0xFF0000, 1, 12, 12);
+		private var erroFilterLig:GlowFilter = new GlowFilter(0xFF0000, 1, 8, 8, 5, 3, false, false);
 		
 		private var colorCovalente:uint = 0x000000;
 		private var colorPonte:uint = 0xFF0000;
@@ -103,6 +107,22 @@
 			opcoes.addEventListener(MouseEvent.MOUSE_DOWN, downOpcoes);
 			
 			menuTipoLigacao.addEventListener(MouseEvent.CLICK, menuLigacaoClick);
+			stage.addEventListener(KeyboardEvent.KEY_DOWN, keyUpEvent);
+		}
+		
+		private function keyUpEvent(e:KeyboardEvent):void 
+		{
+			trace(e.keyCode);
+			if (e.keyCode == Keyboard.DELETE) {
+				if (movingObject != null) {
+					layerAtividade.removeChild(movingObject);
+					moleculas.splice(moleculas.indexOf(movingObject), 1);
+					movingObject = null;
+					lock(opcoes.hInvert);
+					lock(opcoes.vInvert);
+					procuraLigacoes();
+				}
+			}
 		}
 		
 		private function menuLigacaoClick(e:MouseEvent):void 
@@ -119,6 +139,7 @@
 				Molecula(sprFim.parent).setTipoLigacao(sprFim, tipo);
 				
 				redesenhaSpr(ligacaoSelecionada);
+				saveStatus();
 			}
 		}
 		
@@ -187,7 +208,7 @@
 			stage.addEventListener(MouseEvent.MOUSE_MOVE, movingMoleculas);
 		}
 		
-		private function criaObjeto(tipo:String, posX:Number, posY:Number, rotacao:Number = 0, scaleX:Number = NaN, scaleY:Number = NaN):void
+		private function criaObjeto(tipo:String, posX:Number, posY:Number, rotacao:Number = 0, scaleX:Number = NaN, scaleY:Number = NaN):Molecula
 		{
 			var newObj:Molecula;
 			switch (tipo) {
@@ -218,6 +239,8 @@
 			newObj.addEventListener(MouseEvent.MOUSE_DOWN, downMoleculasListener);
 			moleculas.push(newObj);
 			layerAtividade.addChild(newObj);
+			
+			return newObj;
 			//layerAtividade.setChildIndex(spriteLigacoes, layerAtividade.numChildren - 1);
 		}
 		
@@ -261,6 +284,12 @@
 			{
 				item.filters = [];
 			}
+			
+			for each (var item2:Sprite in spriteLigacoes) 
+			{
+				item2.filters = [];
+			}
+			errorFilterOn = false;
 		}
 		
 		private var permiteTween:Boolean = true;
@@ -285,41 +314,46 @@
 			saveStatus();
 		}
 		
+		private var errorFilterOn:Boolean = false;
 		private function finalizaExec(e:MouseEvent):void 
 		{
 			removeSelection();
 			
-			var acertos:int = 0;
-			var total:int = 0;
+			var acertosMol:int = 0;
+			var totalMol:int = 0;
 			for (var i:int = 0; i < moleculas.length; i++) 
 			{
 				var molInicial:Molecula = moleculas[i];
 				if (molInicial.temLigacao()) {
-					total++;
+					totalMol++;
 					switch (molInicial.tipo) {
 						case "fosfato":
-							if (analisaFosfato(molInicial)) acertos++;
+							if (analisaFosfato(molInicial)) acertosMol++;
 							else molInicial.filters = [erroFilter];
 							break;
 						case "basePirimidica":
-							if (analisaBase(molInicial)) acertos++;
+							if (analisaBase(molInicial)) acertosMol++;
 							else molInicial.filters = [erroFilter];
 							break;
 						case "basePurica":
-							if (analisaBase(molInicial)) acertos++;
+							if (analisaBase(molInicial)) acertosMol++;
 							else molInicial.filters = [erroFilter];
 							break;
 						case "pentose":
-							if (analisaPentose(molInicial)) acertos++;
+							if (analisaPentose(molInicial)) acertosMol++;
 							else molInicial.filters = [erroFilter];
 							break;
 					}
 				}
 			}
 			
+			var scoreMoleculas:int = Math.round(acertosMol / totalMol * 100);
+			
+			var acertosLig:int = 0;
+			var totalLig:int = 0;
 			for (var j:int = 0; j < ligacoes.length; j++) 
 			{
-				total++;
+				totalLig++;
 				var inicio:Sprite = ligacoes[j];
 				var end:Sprite = inicioLigacoes[inicio];
 				
@@ -329,16 +363,60 @@
 				if (tipoIni == tipoFim) {
 					if (tipoIni != Molecula.TIPO_INDEFINIDO) {
 						if (inicio is MarcacaoCovalente && tipoIni == Molecula.TIPO_COVALENTE) {
-							acertos++;
+							acertosLig++;
 						}else if (inicio is MarcacaoPonte && tipoIni == Molecula.TIPO_PONTE) {
-							acertos++;
+							acertosLig++;
+						}else {
+							spriteLigacoes[j].filters = [erroFilterLig];
+							errorFilterOn = true;
 						}
+					}else {
+						spriteLigacoes[j].filters = [erroFilterLig];
+						errorFilterOn = true;
 					}
 				}
 			}
 			
-			score = Math.round(acertos / total * 100);
-			feedbackScreen.setText("Sua pontuação foi de " + score + "%." + (score < 99 ? "\nAs moléculas com erro estão destacadas em vermelho." : ""));
+			var scoreLigacoes:int = Math.round(acertosLig / totalLig * 100);
+			
+			score = Math.round((acertosLig + acertosMol) / (totalLig + totalMol)* 100);
+			//score = Math.round((acertosLig + acertosMol) / (totalLig + totalMol)* 50);
+			
+			var estruturaCorreta:Boolean = avaliaEstrutura();
+			//if (estruturaCorreta) score += 50;
+			
+			var feedBack:String = "Sua pontuação foi de " + score + "%.";
+			
+			if (scoreMoleculas < 99) feedBack += "\nAs moléculas com ligações incorretas estão destacadas em vermelho.";
+			else feedBack += "\nAs ligações entre as moléculas estão corretas.";
+			
+			if (scoreLigacoes < 99) feedBack += "\nAs ligações definidas incorretamente, ou indefinidas, estão destacadas em vermelho.";
+			else feedBack += "\nOs tipos das ligações foram definidos corretamente.";
+			
+			//if (estruturaCorreta) feedBack.concat("\nA estrutura do DNA está correta.");
+			//else feedBack.concat("\nA estrutura do DNA não está correta.");
+			
+			feedbackScreen.setText(feedBack);
+		}
+		
+		private function avaliaEstrutura():Boolean 
+		{
+			var visitadas:Dictionary = new Dictionary();
+			var tipos:Vector.<String> = new Vector.<String>();
+			
+			for (var i:int = 0; i < moleculas.length; i++) 
+			{
+				var mol:Molecula = moleculas[i];
+				
+				if (visitadas[mol] == null) visitadas[mol] = 1;
+			}
+			
+			return true;
+		}
+		
+		private function recursao(mol:Molecula):Boolean
+		{
+			return true;
 		}
 		
 		private function analisaPentose(mol:Molecula):Boolean
@@ -536,6 +614,9 @@
 				moleculas.splice(moleculas.indexOf(movingObject), 1);
 				layerAtividade.removeChild(movingObject);
 				movingObject = null;
+				lock(opcoes.hInvert);
+				lock(opcoes.vInvert);
+				procuraLigacoes();
 			}else {
 				movingObject.filters = [moleculaFilter];
 				
@@ -778,6 +859,7 @@
 		private var filterLigacao:GlowFilter = new GlowFilter(0x00FF00, 1, 12, 12);
 		private function overLigacao(e:MouseEvent):void 
 		{
+			if (errorFilterOn) return;
 			var lig:Sprite = Sprite(e.target);
 			if (ligacaoSelecionada != null) {
 				if (ligacaoSelecionada == lig) return;
@@ -798,7 +880,7 @@
 		{
 			removeSelection();
 			ligacaoSelecionada = Sprite(e.target);
-			ligacaoSelecionada.filters = [moleculaFilter];
+			ligacaoSelecionada.filters = [ligacaoFilter];
 			ligacaoSelecionada.removeEventListener(MouseEvent.MOUSE_OUT, outLigacao);
 			var sprIni:Sprite = ligacoes[spriteLigacoes.indexOf(ligacaoSelecionada)];
 			var sprFim:Sprite = inicioLigacoes[sprIni];
@@ -842,6 +924,13 @@
 				status.moleculas[String(i)].scaleX = obj.scaleX;
 				status.moleculas[String(i)].scaleY = obj.scaleY;
 				status.moleculas[String(i)].tipo = obj.tipo;
+				status.moleculas[String(i)].tiposLigacao = new Object();
+				//for each (var item:Sprite in obj.pontosLigacao) 
+				for (var j:int = 0; j < obj.pontosLigacao.length; j++) 
+				{
+					var item:Sprite = obj.pontosLigacao[j];
+					if(obj.tiposPontos[j] != Molecula.TIPO_INDEFINIDO) status.moleculas[String(i)].tiposLigacao[item.name] = obj.tiposPontos[j];
+				}
 			}
 			
 			mementoSerialized = JSON.encode(status);
@@ -853,7 +942,12 @@
 			
 			for (var i:int = 0; i < status.moleculas.qtd; i++) 
 			{
-				criaObjeto(status.moleculas[String(i)].tipo, status.moleculas[String(i)].posX, status.moleculas[String(i)].posY, status.moleculas[String(i)].rotacao, status.moleculas[String(i)].scaleX, status.moleculas[String(i)].scaleY);
+				var mol:Molecula = criaObjeto(status.moleculas[String(i)].tipo, status.moleculas[String(i)].posX, status.moleculas[String(i)].posY, status.moleculas[String(i)].rotacao, status.moleculas[String(i)].scaleX, status.moleculas[String(i)].scaleY);
+				
+				for each (var item:Sprite in mol.pontosLigacao) 
+				{
+					if(status.moleculas[String(i)].tipoLigacao[item.name]) mol.setTipoLigacao(item, status.moleculas[String(i)].tipoLigacao[item.name]);
+				}
 			}
 			
 			if (!connected) {
@@ -957,7 +1051,7 @@
 				
 				pointsTuto = 	[new Point(590, 500),
 								new Point(190 , 530),
-								new Point(490 , 530),
+								new Point(490 , 563),
 								new Point(180 , 180),
 								new Point(220 , 220),
 								new Point(290 , 260),

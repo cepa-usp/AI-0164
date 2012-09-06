@@ -101,6 +101,11 @@
 			colors[Molecula.TIPO_COVALENTE] = colorCovalente;
 			colors[Molecula.TIPO_PONTE] = colorPonte;
 			colors[Molecula.TIPO_INDEFINIDO] = colorIndefinido;
+			
+			opcoes.fosfato.buttonMode = true;
+			opcoes.basePirimidica.buttonMode = true;
+			opcoes.basePurica.buttonMode = true;
+			opcoes.pentose.buttonMode = true;
 		}
 		
 		private function addListeners():void 

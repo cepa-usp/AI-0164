@@ -208,6 +208,7 @@
 			newObj.addEventListener(MouseEvent.MOUSE_DOWN, downMoleculasListener);
 			moleculas.push(newObj);
 			layerAtividade.addChild(newObj);
+			layerAtividade.setChildIndex(menuTipoLigacao, layerAtividade.numChildren - 1);
 			//layerAtividade.setChildIndex(spriteLigacoes, layerAtividade.numChildren - 1);
 			
 			removeSelection();
@@ -251,7 +252,7 @@
 			newObj.addEventListener(MouseEvent.MOUSE_DOWN, downMoleculasListener);
 			moleculas.push(newObj);
 			layerAtividade.addChild(newObj);
-			
+			layerAtividade.setChildIndex(menuTipoLigacao, layerAtividade.numChildren - 1);
 			return newObj;
 			//layerAtividade.setChildIndex(spriteLigacoes, layerAtividade.numChildren - 1);
 		}
@@ -314,9 +315,15 @@
 				Actuate.tween(target, 0.3, { scaleX:target.scaleX * -1 } ).onComplete(liberaTween);
 			}else {
 				//target.scaleY *= -1;
-				Actuate.tween(target, 0.3, {rotation:target.rotation - 72}).onComplete(liberaTween);
+				Actuate.tween(target, 0.3, { rotation:target.rotation - 72 } ).onComplete(liberaTween).onUpdate(updateCarbonos, target);
 			}
 			permiteTween = false;
+		}
+		
+		private function updateCarbonos(pentose:MovieClip):void 
+		{
+			pentose.c5.rotation = -pentose.rotation;
+			pentose.c3.rotation = -pentose.rotation;
 		}
 		
 		private function liberaTween():void 
@@ -720,6 +727,7 @@
 			removeSelection();
 			movingObject = Molecula(e.target);
 			layerAtividade.setChildIndex(movingObject, layerAtividade.numChildren - 1);
+			layerAtividade.setChildIndex(menuTipoLigacao, layerAtividade.numChildren - 1);
 			//layerAtividade.setChildIndex(spriteLigacoes, layerAtividade.numChildren - 1);
 			mouseDiff.x = (mouseX - movingObject.x);// * movingObject.scaleX;
 			mouseDiff.y = (mouseY - movingObject.y); // * movingObject.scaleY;
@@ -984,6 +992,7 @@
 					spr.graphics.lineTo(ptSpr2.x, ptSpr2.y);
 				}
 			}
+			layerAtividade.setChildIndex(menuTipoLigacao, layerAtividade.numChildren - 1);
 		}
 		
 		private var ligacaoSelecionada:Sprite;
@@ -1184,8 +1193,8 @@
 								"Pressione \"terminei\" para avaliar sua resposta."];
 				
 				pointsTuto = 	[new Point(560, 550),
-								new Point(220 , 550),
-								new Point(480 , 550),
+								new Point(240 , 550),
+								new Point(460 , 550),
 								new Point(180 , 180),
 								new Point(200 , 200),
 								new Point(220 , 220),

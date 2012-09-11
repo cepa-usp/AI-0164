@@ -441,6 +441,7 @@
 			//else feedBack.concat("\nA estrutura do DNA não está correta.");
 			
 			feedbackScreen.setText(feedBack);
+			saveStatus();
 		}
 		
 		private function atingiuQuantidades(qtd:Dictionary):Boolean
